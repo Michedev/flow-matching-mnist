@@ -1,8 +1,9 @@
-from .flow_matching_model import ImageFlowMatcher
+from models.flow_matching_model import ImageFlowMatcher
 import pytorch_lightning as pl
 from torchvision import transforms, datasets 
 from torch.utils.data import DataLoader
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from flow_matching_classifier import ImageClassifierFlowMatching
 import argparse
 
 def get_args():
@@ -47,8 +48,9 @@ def main():
     test_loader = DataLoader(test_data, batch_size=args.batch_size)
 
     # Model setup
-    model = ImageFlowMatcher(lr=args.lr, c_unet=args.c_unet)
-    
+    # model = ImageFlowMatcher(lr=args.lr, c_unet=args.c_unet)
+    model = ImageClassifierFlowMatching(lr=args.lr)
+
     # Lightning setup
     callbacks = [
         ModelCheckpoint(
@@ -69,7 +71,9 @@ def main():
         accelerator='auto',
         devices=args.devices,
         max_epochs=args.max_epochs,
-        callbacks=callbacks
+        callbacks=callbacks,
+        limit_val_batches=0.1,
+
     )
 
     # Train

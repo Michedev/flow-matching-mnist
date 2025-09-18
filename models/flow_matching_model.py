@@ -10,7 +10,7 @@ from flow_matching.path import CondOTProbPath
 from flow_matching.solver import ODESolver
 
 # Local imports
-from .unet import UNet
+from unet import UNet
 
 
 class ImageFlowMatcher(pl.LightningModule):

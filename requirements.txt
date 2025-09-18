@@ -6,3 +6,5 @@ Pillow>=9.0.0
 tqdm>=4.65.0
 einops>=0.6.0
 flow-matching==1.0.10
+matplotlib
+seaborn
