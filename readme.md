@@ -1,6 +1,8 @@
 # Flow Matching for MNIST
 ![flow matching](https://github.com/user-attachments/assets/78d56f06-29e7-461c-9f9d-0d024549f853)
 
+![photo_2025-09-19_17-21-11](https://github.com/user-attachments/assets/28dbab1e-33d3-439b-bc0e-0b0f14c1d6bd)
+
 
 This project implements a flow matching model for image generation using PyTorch Lightning. The model is trained on the MNIST dataset and can generate new images using a learned flow.
 
@@ -97,8 +99,6 @@ Key configuration options (from `config/train.yaml`):
 - `checkpoint_path`: Path to checkpoint for validation/resuming (default: null)
 
 ## Generation
-![output_mnist](https://github.com/user-attachments/assets/a0c66b52-49f4-40bc-bec4-132f8ef2df35)
-
 To generate new images using a trained model, run:
 
 **With Justfile:**
