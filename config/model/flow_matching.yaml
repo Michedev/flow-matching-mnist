@@ -1,0 +1,3 @@
+_target_: models.fm.ImageFlowMatcher
+lr: 1e-4
+c_unet: 32

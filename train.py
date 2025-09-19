@@ -1,83 +1,94 @@
-from models.flow_matching_model import ImageFlowMatcher
 import pytorch_lightning as pl
+import torch
 from torchvision import transforms, datasets 
 from torch.utils.data import DataLoader
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from flow_matching_classifier import ImageClassifierFlowMatching
-import argparse
+from pytorch_lightning.loggers import TensorBoardLogger
+# from models. import ImageClassifierFlowMatching
+import hydra
+from omegaconf import DictConfig
+from omegaconf import OmegaConf
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    
-    # Data args
-    parser.add_argument('--data_dir', type=str, default='data',
-                        help='Directory to store the datasets')
-    parser.add_argument('--batch_size', type=int, default=32,
-                        help='Batch size for training and testing')
-    
-    # Training args
-    parser.add_argument('--max_epochs', type=int, default=10,
-                        help='Maximum number of training epochs')
-    parser.add_argument('--devices', type=int, default=1,
-                        help='Number of GPUs to use')
-    
-    # Checkpoint args
-    parser.add_argument('--ckpt_dir', type=str, default='checkpoints',
-                        help='Directory to save checkpoints')
-    parser.add_argument('--early_stopping', action='store_true',
-                        help='Enable early stopping')
-    parser.add_argument('--patience', type=int, default=3,
-                        help='Early stopping patience')
-    
-    ImageFlowMatcher.add_model_specific_args(parser)
-    
-    return parser.parse_args()
+import logging
 
-def main():
-    args = get_args()
+from paths import FID_PATH
+from utils import calculate_fid_score, save_real_features_
+
+logger = logging.getLogger(__name__)
+
+OmegaConf.register_new_resolver('file_name', lambda x: x.split('.')[-2])
+
+@hydra.main(version_base=None, config_path="config", config_name="train")
+def main(cfg: DictConfig):
+    logger.info("Starting training process")
+    logger.info(f"Configuration: {OmegaConf.to_yaml(cfg)}")
     
     # Data setup 
+    logger.info("Setting up data loaders")
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
     
-    train_data = datasets.MNIST(args.data_dir, train=True, download=True, transform=transform)
-    test_data = datasets.MNIST(args.data_dir, train=False, transform=transform)
+    logger.info(f"Loading MNIST dataset from {cfg.data.data_dir}")
+    train_data = datasets.MNIST(cfg.data.data_dir, train=True, download=True, transform=transform)
+    test_data = datasets.MNIST(cfg.data.data_dir, train=False, transform=transform)
     
-    train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=args.batch_size)
+    logger.info(f"Train dataset size: {len(train_data)}, Test dataset size: {len(test_data)}")
+    logger.info(f"Batch size: {cfg.data.batch_size}")
+    
+    
+    train_loader = DataLoader(train_data, batch_size=cfg.data.batch_size, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=cfg.data.batch_size)
+    if not FID_PATH.exists():
+        if not FID_PATH.parent.exists(): FID_PATH.parent.mkdir(parents=True, exist_ok=True)
+        fid = calculate_fid_score(train_loader, max_samples=30_000)
+        save_real_features_(fid)
+    logger.info(f"Train batches: {len(train_loader)}, Test batches: {len(test_loader)}")
 
     # Model setup
-    # model = ImageFlowMatcher(lr=args.lr, c_unet=args.c_unet)
-    model = ImageClassifierFlowMatching(lr=args.lr)
+    logger.info("Instantiating model")
+    model = hydra.utils.instantiate(cfg.model)
+    logger.info(f"Model class: {cfg.model['_target_']}")
+    logger.info(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     # Lightning setup
-    callbacks = [
+    logger.info("Setting up PyTorch Lightning trainer")
+    callbacks: list[pl.Callback] = [
         ModelCheckpoint(
-            monitor='train_loss', 
-            dirpath=args.ckpt_dir,
-            filename='flow-{epoch:02d}-{train_loss:.2f}',
-            save_top_k=3,
-            mode='min'
+            monitor=cfg.checkpoint.monitor, 
+            filename=cfg.checkpoint.filename,
+            save_top_k=cfg.checkpoint.save_top_k,
+            mode=cfg.checkpoint.mode
         )
     ]
+    logger.info(f"Checkpoint callback configured - monitoring: {cfg.checkpoint.monitor}")
 
-    if args.early_stopping:
+    tb_logger = TensorBoardLogger(save_dir='.', name='training_logs')
+    logger.info("TensorBoard logger configured")
+
+    if cfg.early_stopping.enabled:
         callbacks.append(
-            EarlyStopping(monitor='train_loss', patience=args.patience)
+            EarlyStopping(monitor=cfg.early_stopping.monitor, patience=cfg.early_stopping.patience)
         )
+        logger.info(f"Early stopping enabled - monitoring: {cfg.early_stopping.monitor}, patience: {cfg.early_stopping.patience}")
+    else:
+        logger.info("Early stopping disabled")
 
     trainer = pl.Trainer(
-        accelerator='auto',
-        devices=args.devices,
-        max_epochs=args.max_epochs,
+        accelerator=cfg.training.accelerator,
+        devices=cfg.training.devices,
+        max_epochs=cfg.training.max_epochs,
         callbacks=callbacks,
-        limit_val_batches=0.1,
-
+        limit_val_batches=cfg.training.limit_val_batches,
+        logger=tb_logger
     )
+    
+    logger.info(f"Trainer configured - max_epochs: {cfg.training.max_epochs}, devices: {cfg.training.devices}, accelerator: {cfg.training.accelerator}")
 
     # Train
+    logger.info("Starting training")
     trainer.fit(model, train_loader, test_loader)
+    logger.info("Training completed")
 
 if __name__ == '__main__':
     main()

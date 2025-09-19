@@ -1,4 +1,4 @@
-from .models.flow_matching_model import ImageFlowMatcher
+from .models.fm import ImageFlowMatcher
 import torch
 import argparse
 from torchvision.utils import save_image

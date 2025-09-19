@@ -10,7 +10,7 @@ from flow_matching.path import CondOTProbPath
 from flow_matching.solver import ODESolver
 
 # Local imports
-from unet import UNet
+from models.velocity_architectures.unet import UNet
 
 
 class ImageFlowMatcher(pl.LightningModule):
@@ -22,7 +22,8 @@ class ImageFlowMatcher(pl.LightningModule):
     def __init__(
         self,
         lr: float = 1e-4,
-        c_unet: float = 32
+        c_unet: float = 32,
+        input_channels: int = 1,
     ):
         """
         Initialize the ImageFlowMatcher module.
@@ -42,8 +43,8 @@ class ImageFlowMatcher(pl.LightningModule):
 
         # Velocity field model (UNet). This predicts v(x, t).
         self.model = UNet(
-            in_channels=1,   # MNIST is grayscale, single channel
-            out_channels=1,  # We produce the same shape as input
+            in_channels=input_channels,   # MNIST is grayscale, single channel
+            out_channels=input_channels,  # We produce the same shape as input
             c=c_unet
         )
 
@@ -207,19 +208,3 @@ class ImageFlowMatcher(pl.LightningModule):
             torch.optim.Optimizer: The optimizer used for training the UNet.
         """
         return torch.optim.Adam(self.model.parameters(), lr=self.lr)
-
-    @staticmethod
-    def add_model_specific_args(parser):
-        """
-        Add model-specific command-line arguments to an existing parser.
-
-        Args:
-            parser (argparse.ArgumentParser): The main or subparser in which to add these arguments.
-
-        Returns:
-            argparse.ArgumentParser: The parser updated with Flow Matcher arguments.
-        """
-        group = parser.add_argument_group('Flow Matcher Arguments')
-        group.add_argument('--lr', type=float, default=1e-4, help='Learning rate for the Flow Matcher model', dest='lr')
-        group.add_argument('--c-unet', default=32, type=float, help='Channels of UNet model', dest='c_unet')
-        return parser

@@ -1,0 +1,38 @@
+defaults:
+  - model: flow_matching
+  - _self_
+
+
+# Data configuration
+data:
+  data_dir: ${hydra:runtime.cwd}/data
+  batch_size: 32
+
+# Training configuration
+training:
+  max_epochs: 10
+  devices: 1
+  accelerator: auto
+  limit_val_batches: 0.1
+
+# Checkpoint configuration
+checkpoint:
+  monitor: train_loss
+  filename: flow-{epoch:02d}-{train_loss:.2f}
+  save_top_k: 3
+  mode: min
+
+# Early stopping configuration
+early_stopping:
+  enabled: false
+  patience: 3
+  monitor: train_loss
+
+
+# Output configuration
+hydra:
+  run:
+    dir: outputs/${file_name:${model._target_}}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job:
+    chdir: true
+  verbose: false  # set true to enable debug
