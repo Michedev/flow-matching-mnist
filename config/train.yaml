@@ -29,6 +29,9 @@ early_stopping:
   monitor: train_loss
 
 
+validate_only: false
+checkpoint_path: null
+
 # Output configuration
 hydra:
   run:

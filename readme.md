@@ -12,9 +12,27 @@ This project implements a flow matching model for image generation using PyTorch
 
 ## Installation
 
+### Option 1: Direct Installation
 ```bash
 pip install -r requirements.txt
 ```
+
+### Option 2: Setup with Justfile (Recommended)
+This project includes a `Justfile` for easy environment management using conda:
+
+```bash
+# Create and setup conda environment
+just setup-env
+
+# Run Python commands in the environment
+just python train.py
+
+# Remove environment (if needed)
+just remove-env
+```
+
+The Justfile creates a conda environment named `mnist-flow-matching` with Python 3.13 and installs all dependencies.
+
 ## Jupyter Notebook
 
 The project includes a Jupyter notebook (`flow-matching-with-mnist-dataset.ipynb`) that demonstrates the flow matching process and provides the complete workflow of the training on kaggle
@@ -23,24 +41,72 @@ The project includes a Jupyter notebook (`flow-matching-with-mnist-dataset.ipynb
 
 To train the model, run:
 
+**With Justfile:**
 ```bash
-python train.py --data_dir data --batch_size 32 --max_epochs 10
+just python train.py
 ```
 
-Key training arguments:
-- `--data_dir`: Directory to store the datasets (default: 'data')
-- `--batch_size`: Batch size for training and testing (default: 32)
-- `--max_epochs`: Maximum number of training epochs (default: 10)
-- `--devices`: Number of GPUs to use (default: 1)
-- `--ckpt_dir`: Directory to save checkpoints (default: 'checkpoints')
-- `--early_stopping`: Enable early stopping (flag)
-- `--patience`: Early stopping patience (default: 3)
+**Without Justfile:**
+```bash
+python train.py
+```
+
+### Configuration
+
+The training is configured using Hydra with YAML configuration files located in the `config/` directory. You can override any configuration parameter:
+
+```bash
+# Override data configuration
+just python train.py data.batch_size=64 training.max_epochs=20
+
+# Enable early stopping
+just python train.py early_stopping.enabled=true early_stopping.patience=5
+
+# Use different devices
+just python train.py training.devices=2 training.accelerator=gpu
+
+# Validate only mode
+just python train.py validate_only=true checkpoint_path=path/to/checkpoint.ckpt
+```
+
+Key configuration options (from `config/train.yaml`):
+
+**Data Configuration:**
+- `data.data_dir`: Directory to store the datasets (default: `data`)
+- `data.batch_size`: Batch size for training and testing (default: 32)
+
+**Training Configuration:**
+- `training.max_epochs`: Maximum number of training epochs (default: 10)
+- `training.devices`: Number of devices to use (default: 1)
+- `training.accelerator`: Accelerator type (default: auto)
+- `training.limit_val_batches`: Fraction of validation batches (default: 0.1)
+
+**Checkpoint Configuration:**
+- `checkpoint.monitor`: Metric to monitor for checkpointing (default: train_loss)
+- `checkpoint.filename`: Checkpoint filename pattern
+- `checkpoint.save_top_k`: Number of top checkpoints to save (default: 3)
+- `checkpoint.mode`: Monitoring mode (default: min)
+
+**Early Stopping Configuration:**
+- `early_stopping.enabled`: Enable early stopping (default: false)
+- `early_stopping.patience`: Early stopping patience (default: 3)
+- `early_stopping.monitor`: Metric to monitor for early stopping (default: train_loss)
+
+**Other Options:**
+- `validate_only`: Run validation only (default: false)
+- `checkpoint_path`: Path to checkpoint for validation/resuming (default: null)
 
 ## Generation
 ![output_mnist](https://github.com/user-attachments/assets/a0c66b52-49f4-40bc-bec4-132f8ef2df35)
 
 To generate new images using a trained model, run:
 
+**With Justfile:**
+```bash
+just python generate.py --checkpoint path/to/checkpoint.ckpt --num_samples 16
+```
+
+**Without Justfile:**
 ```bash
 python generate.py --checkpoint path/to/checkpoint.ckpt --num_samples 16
 ```
@@ -65,7 +131,12 @@ The flow matching model is implemented in `flow_matching_model.py`. It uses a UN
 ```
 .
 ├── README.md
+├── Justfile
 ├── requirements.txt
+├── config/
+│   ├── train.yaml
+│   └── model/
+│       └── flow_matching.yaml
 ├── train.py
 ├── generate.py
 └── flow_matching_model.py
@@ -74,11 +145,23 @@ The flow matching model is implemented in `flow_matching_model.py`. It uses a UN
 ## Example Usage
 
 1. Train the model:
+**With Justfile:**
 ```bash
-python train.py --batch_size 64 --max_epochs 20 --early_stopping
+just python train.py data.batch_size=64 training.max_epochs=20 early_stopping.enabled=true
+```
+
+**Without Justfile:**
+```bash
+python train.py data.batch_size=64 training.max_epochs=20 early_stopping.enabled=true
 ```
 
 2. Generate images:
+**With Justfile:**
+```bash
+just python generate.py --checkpoint checkpoints/flow-best.ckpt --num_samples 100 --num_steps 4
+```
+
+**Without Justfile:**
 ```bash
 python generate.py --checkpoint checkpoints/flow-best.ckpt --num_samples 100 --num_steps 4
 ```
