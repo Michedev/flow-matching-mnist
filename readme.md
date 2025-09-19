@@ -1,5 +1,6 @@
 # Flow Matching for MNIST
 ![flow matching](https://github.com/user-attachments/assets/78d56f06-29e7-461c-9f9d-0d024549f853)
+
 ![photo_2025-09-19_17-21-11](https://github.com/user-attachments/assets/28dbab1e-33d3-439b-bc0e-0b0f14c1d6bd)
 
 
