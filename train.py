@@ -41,7 +41,7 @@ def main(cfg: DictConfig):
     test_loader = DataLoader(test_data, batch_size=cfg.data.batch_size)
     if not FID_PATH.exists():
         if not FID_PATH.parent.exists(): FID_PATH.parent.mkdir(parents=True, exist_ok=True)
-        fid = calculate_fid_score(train_loader, max_samples=30_000)
+        fid = calculate_fid_score(train_loader)
         save_real_features_(fid)
     logger.info(f"Train batches: {len(train_loader)}, Test batches: {len(test_loader)}")
 
